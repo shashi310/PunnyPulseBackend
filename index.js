@@ -130,7 +130,7 @@ app.use(express.json());
 app.use(cors());
 const { Configuration, OpenAIApi } = require("openai");
 // app.use(express.static(path.join(__dirname, 'public')));
-const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
+const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY ||"my API key"});
 // async function generateCompletion(input) {
 //   try {
 //     const prompt = input;
