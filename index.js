@@ -123,14 +123,27 @@ const express = require('express');
 const  OpenAI  = require("openai");
 require("dotenv").config();
 // const path = require('path');
+const {UserRoute}=require("./Routes/Users.Routes")
+const { HistoryRoute } = require("./Routes/History.Routes");
+const { HistoryModel } = require("./Models/history.model");
+
+const { connection } = require("./config/db");
+
 const cors = require("cors");
+const { verify } = require('./middleware/jwtAuth.middleware');
 const app = express();
-const port = 8080;
+const port = process.env.PORT || 8080
 app.use(express.json());
 app.use(cors());
-const { Configuration, OpenAIApi } = require("openai");
+
+
+app.use("/user", UserRoute);
+
+app.use("/history", HistoryRoute);
+
+// const { Configuration, OpenAIApi } = require("openai");
 // app.use(express.static(path.join(__dirname, 'public')));
-const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY ||"my API key"});
+const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY ||"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"});
 // async function generateCompletion(input) {
 //   try {
 //     const prompt = input;
@@ -159,16 +172,26 @@ const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY ||"my API key"});
 //     throw error;
 //   }
 // }
-app.post('/generate', async (req, res) => {
+app.post('/generate', verify, async (req, res) => {
   try { 
     const { content, language, input } = req.body;
     console.log(content, language, input);
     // const response = await generateCompletion(`Give me a ${content} in ${language} of ${input}`);
 
     const response = await main(content, language, input)
-    
+//saving Data in history model
+    let data= response[0].message.content
+    console.log("USER ID", req.body);
+    const history = new HistoryModel({
+      body: data,
+      userID: req.body.id,
+      date: Date(),
+    });
+    await history.save();
 
+    //display the response from OPen AI
     res.json( response[0].message );
+    
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: 'An error occurred' });
@@ -193,6 +216,13 @@ app.get('/', (req, res) => {
   // res.sendFile(path.join(__dirname, 'public', 'index.html'));
   res.send("Welcome to the backend of PunnyPulse")
 });
-app.listen(port, () => {
-  console.log(`Server is listening on port ${port}`);
+
+
+app.listen(port, async () => {
+	try {
+		await connection();
+		console.log(`Listening at port - ${port}`);
+	} catch (error) {
+		console.error(error.message);
+	}
 });
